@@ -166,7 +166,7 @@ leaderboard_df = pd.DataFrame({
 st.dataframe(leaderboard_df, use_container_width=True)
 
 # -------------------------------
-# MOBILE-FRIENDLY STAR VOTING
+# MOBILE-FRIENDLY CLICKABLE STAR VOTING
 # -------------------------------
 if voting_open:
     voter_id = st.text_input("Enter your name or email to vote:")
@@ -174,21 +174,27 @@ if voting_open:
     if voter_id and voter_id in voters:
         st.warning("You have already voted. Thank you!")
     elif voter_id:
+        st.markdown("### Tap the stars to vote (1–10)")
         user_votes = {}
-        st.markdown("### Select your rating for each Gin (1–10 stars)")
         for gin in gins:
-            col1, col2 = st.columns([1,4])
-            # Show thumbnail if exists
+            col1, col2 = st.columns([1, 4])
+            # Thumbnail
             thumbnail_path = THUMBNAILS_DIR / f"{gin}.png"
             if thumbnail_path.exists():
                 col1.image(Image.open(thumbnail_path), use_container_width=True)
-            # Star rating
-            star_options = [f"{'★'*i}{'☆'*(10-i)}" for i in range(1,11)]
-            user_votes[gin] = col2.selectbox(gin, options=star_options, index=4, format_func=lambda x: x)
+
+            # Star buttons
+            st.write(f"**{gin}**")
+            star_score = col2.radio(
+                "",
+                options=list(range(1,11)),
+                format_func=lambda x: "★"*x + "☆"*(10-x),
+                horizontal=True
+            )
+            user_votes[gin] = star_score
 
         if st.button("Submit Votes"):
-            for gin, stars in user_votes.items():
-                score = stars.count("★")
+            for gin, score in user_votes.items():
                 all_votes[gin].append(score)
             voters.add(voter_id)
             with open(VOTES_FILE, "w") as f:
@@ -203,7 +209,7 @@ else:
 if not voting_open and avg_scores:
     st.subheader("Top 3 Gins Vote Distribution (Collapsed)")
     for i, gin in enumerate(top_3):
-        with st.expander(f"{gin} ({avg_scores[gin]:.2f} average, {len(all_votes[gin])} votes)"):
+        with st.expander(f"{gin} ({avg_scores[gin]:.2f} avg, {len(all_votes[gin])} votes)"):
             scores_counter = Counter(all_votes[gin])
             scores_list = [scores_counter.get(j,0) for j in range(10,0,-1)]
             fig, ax = plt.subplots(figsize=(6,4))
