@@ -1,4 +1,3 @@
-from streamlit_autorefresh import st_autorefresh
 import streamlit as st
 import qrcode
 import json
@@ -6,30 +5,49 @@ import pandas as pd
 from io import BytesIO
 from pathlib import Path
 from collections import Counter
-import time
+from PIL import Image
 import matplotlib.pyplot as plt
+from streamlit_autorefresh import st_autorefresh
 
-# --- Files to store data ---
+# -------------------------------
+# FILES FOR DATA AND SETTINGS
+# -------------------------------
 VOTES_FILE = Path("gin_votes.json")
 STATE_FILE = Path("voting_state.json")
+SETTINGS_FILE = Path("settings.json")
 
-# --- Streamlit Cloud Public URL ---
-public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"  #
+# -------------------------------
+# PUBLIC URL FOR QR CODE
+# -------------------------------
+public_url = "https://<your-username>-gin-voting-app-main.streamlit.app"  # Replace with your deployed URL
 
-# --- Initialize voting state ---
+# -------------------------------
+# AUTO REFRESH
+# -------------------------------
+st_autorefresh(interval=5000, key="live_refresh")  # refresh every 5s
+
+# -------------------------------
+# LOAD OR INITIALIZE VOTING STATE
+# -------------------------------
 if not STATE_FILE.exists():
     with open(STATE_FILE, "w") as f:
         json.dump({"open": True}, f)
-
 with open(STATE_FILE, "r") as f:
     state_data = json.load(f)
 voting_open = state_data.get("open", True)
 
-# --- Auto-refresh ---
-# Auto-refresh every 5 seconds
-st_autorefresh(interval=5000, key="live_refresh")
+# -------------------------------
+# LOAD OR INITIALIZE SETTINGS
+# -------------------------------
+if SETTINGS_FILE.exists():
+    with open(SETTINGS_FILE, "r") as f:
+        settings = json.load(f)
+else:
+    settings = {"title": "Gin Judging Competition 🍸", "image": None}
 
-# --- Load existing votes ---
+# -------------------------------
+# LOAD OR INITIALIZE VOTES
+# -------------------------------
 all_votes = {}
 voters = set()
 if VOTES_FILE.exists():
@@ -42,18 +60,18 @@ if VOTES_FILE.exists():
         all_votes = {}
         voters = set()
 
-# --- List of 30 gins ---
+# 30 Gins
 gins = [f"Gin {i}" for i in range(1, 31)]
 for gin in gins:
     if gin not in all_votes:
         all_votes[gin] = []
 
-# --- App title ---
-st.title("Gin Judging Competition 🍸")
-st.write("Please score each gin between 1 (poor) and 10 (excellent).")
-
-# --- Admin Controls ---
+# -------------------------------
+# ADMIN CONTROLS
+# -------------------------------
 st.sidebar.header("Admin Controls")
+
+# Open / Close / Reset Voting
 if st.sidebar.button("Open Voting"):
     voting_open = True
     with open(STATE_FILE, "w") as f:
@@ -66,24 +84,55 @@ if st.sidebar.button("Close Voting"):
         json.dump({"open": False}, f)
     st.sidebar.warning("Voting is now CLOSED.")
 
-if st.sidebar.button("Reset All Votes (Admin Only)"):
+if st.sidebar.button("Reset All Votes"):
     all_votes = {gin: [] for gin in gins}
     voters = set()
     with open(VOTES_FILE, "w") as f:
         json.dump({"votes": all_votes, "voters": list(voters)}, f)
     st.sidebar.warning("All votes have been reset!")
 
+# Download CSV
 if st.sidebar.button("Download All Votes as CSV"):
     df = pd.DataFrame(all_votes)
     st.sidebar.download_button("Download CSV", df.to_csv(index=False), "gin_votes.csv", "text/csv")
 
-# --- Compute averages ---
+# -------------------------------
+# ADMIN CUSTOM TITLE / IMAGE
+# -------------------------------
+custom_title = st.sidebar.text_input("Page Title", settings.get("title", "Gin Judging Competition 🍸"))
+uploaded_file = st.sidebar.file_uploader("Upload an image for the title", type=["png", "jpg", "jpeg"])
+
+if st.sidebar.button("Save Title and Image"):
+    settings["title"] = custom_title
+    if uploaded_file:
+        img = Image.open(uploaded_file)
+        img_path = Path("title_image.png")
+        img.save(img_path)
+        settings["image"] = str(img_path)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings, f)
+    st.sidebar.success("Settings saved!")
+
+# -------------------------------
+# DISPLAY TITLE AND IMAGE
+# -------------------------------
+title_col, img_col = st.columns([4, 1])
+title_col.header(settings.get("title", "Gin Judging Competition 🍸"))
+if settings.get("image") and Path(settings["image"]).exists():
+    img = Image.open(settings["image"])
+    img_col.image(img, use_column_width=True)
+
+# -------------------------------
+# COMPUTE AVERAGES
+# -------------------------------
 avg_scores = {}
 for gin, scores in all_votes.items():
     numeric_scores = [int(s) for s in scores if str(s).isdigit()]
     avg_scores[gin] = sum(numeric_scores)/len(numeric_scores) if numeric_scores else 0
 
-# --- Live Leaderboard ---
+# -------------------------------
+# LEADERBOARD
+# -------------------------------
 st.subheader("🏅 Live Leaderboard")
 leaderboard_df = pd.DataFrame({
     "Gin": gins,
@@ -92,7 +141,6 @@ leaderboard_df = pd.DataFrame({
 })
 leaderboard_df = leaderboard_df.sort_values(by="Average Score", ascending=False).reset_index(drop=True)
 
-# Highlight top 3
 def highlight_top(row):
     if row.name == 0:
         return ["background-color: gold"]*3
@@ -105,24 +153,14 @@ def highlight_top(row):
 
 st.dataframe(leaderboard_df.style.apply(highlight_top, axis=1), use_container_width=True)
 
-# --- Voting Section ---
+# -------------------------------
+# VOTING SECTION
+# -------------------------------
 if voting_open:
     voter_id = st.text_input("Enter your name or email to vote:")
 
     if voter_id and voter_id in voters:
         st.warning("You have already voted. Thank you!")
-        try:
-            user_votes = pd.read_csv(f"user_{voter_id}_votes.csv", index_col=0).to_dict()['Score']
-            comparison_df = pd.DataFrame({
-                "Gin": gins,
-                "Your Score": [user_votes.get(gin, None) for gin in gins],
-                "Average Score": [avg_scores[gin] for gin in gins]
-            })
-            comparison_df["Difference"] = comparison_df["Your Score"] - comparison_df["Average Score"]
-            st.subheader("Your Votes vs Average")
-            st.dataframe(comparison_df.style.highlight_max(subset=["Your Score"], color="lightgreen"), use_container_width=True)
-        except FileNotFoundError:
-            st.info("Your previous votes cannot be displayed.")
     elif voter_id:
         user_votes = {}
         for gin in gins:
@@ -137,11 +175,12 @@ if voting_open:
                 json.dump({"votes": all_votes, "voters": list(voters)}, f)
             pd.DataFrame({"Gin": list(user_votes.keys()), "Score": list(user_votes.values())}).set_index("Gin").to_csv(f"user_{voter_id}_votes.csv")
             st.success("Thank you for voting! Your votes have been added.")
-
 else:
     st.warning("Voting is currently CLOSED. Results are final.")
 
-# --- Winner summary if voting closed ---
+# -------------------------------
+# WINNER SUMMARY IF VOTING CLOSED
+# -------------------------------
 if not voting_open and avg_scores:
     st.subheader("Top 3 Gins Vote Distribution")
     top_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
@@ -160,7 +199,9 @@ if not voting_open and avg_scores:
         ax.set_title(f"Vote Distribution for {gin}")
         st.pyplot(fig)
 
-# --- QR code for sharing ---
+# -------------------------------
+# QR CODE
+# -------------------------------
 st.subheader("Share this app via QR code")
 qr = qrcode.QRCode(box_size=6, border=2)
 qr.add_data(public_url)
@@ -171,7 +212,9 @@ img.save(buf, format="PNG")
 buf.seek(0)
 st.image(buf.getvalue(), caption=f"Scan to open: {public_url}")
 
-# --- Hide Streamlit footer/menu ---
+# -------------------------------
+# HIDE STREAMLIT FOOTER / MENU
+# -------------------------------
 hide_st_style = """
     <style>
     #MainMenu {visibility: hidden;}
