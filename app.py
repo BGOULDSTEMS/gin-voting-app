@@ -19,7 +19,7 @@ SETTINGS_FILE = Path("settings.json")
 # -------------------------------
 # PUBLIC URL FOR QR CODE
 # -------------------------------
-public_url = "https://<your-username>-gin-voting-app-main.streamlit.app"  # Replace with your deployed URL
+public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"  # Replace with your deployed URL
 
 # -------------------------------
 # AUTO REFRESH
