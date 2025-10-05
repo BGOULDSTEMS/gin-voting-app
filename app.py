@@ -183,13 +183,14 @@ if voting_open:
             if thumbnail_path.exists():
                 col1.image(Image.open(thumbnail_path), use_container_width=True)
 
-            # Star buttons
+            # Star buttons with UNIQUE KEY
             st.write(f"**{gin}**")
             star_score = col2.radio(
                 "",
                 options=list(range(1,11)),
                 format_func=lambda x: "★"*x + "☆"*(10-x),
-                horizontal=True
+                horizontal=True,
+                key=f"star_{gin}"  # FIX for duplicate element id
             )
             user_votes[gin] = star_score
 
@@ -207,7 +208,7 @@ else:
 # WINNER SUMMARY IF VOTING CLOSED
 # -------------------------------
 if not voting_open and avg_scores:
-    st.subheader("Top 3 Gins Vote Distribution (Collapsed)")
+    st.subheader("Top 3 Gins Vote Distribution")
     for i, gin in enumerate(top_3):
         with st.expander(f"{gin} ({avg_scores[gin]:.2f} avg, {len(all_votes[gin])} votes)"):
             scores_counter = Counter(all_votes[gin])
