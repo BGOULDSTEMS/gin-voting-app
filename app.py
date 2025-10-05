@@ -26,12 +26,8 @@ with open(STATE_FILE, "r") as f:
 voting_open = state_data.get("open", True)
 
 # --- Auto-refresh ---
-AUTO_REFRESH_INTERVAL = 5  # seconds
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-elif time.time() - st.session_state.last_refresh > AUTO_REFRESH_INTERVAL:
-    st.session_state.last_refresh = time.time()
-    st.experimental_rerun()
+# Auto-refresh every 5 seconds
+st_autorefresh(interval=5000, key="live_refresh")
 
 # --- Load existing votes ---
 all_votes = {}
