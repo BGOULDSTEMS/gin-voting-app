@@ -20,7 +20,7 @@ THUMBNAILS_DIR = Path("gin_thumbnails")  # folder for gin images
 # -------------------------------
 # PUBLIC URL FOR QR CODE
 # -------------------------------
-public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
+public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"  # Replace with your deployed URL
 
 # -------------------------------
 # AUTO REFRESH
@@ -166,7 +166,7 @@ leaderboard_df = pd.DataFrame({
 st.dataframe(leaderboard_df, use_container_width=True)
 
 # -------------------------------
-# SLIDER VOTING
+# SLIDER VOTING WITH NAME ABOVE
 # -------------------------------
 if voting_open:
     voter_id = st.text_input("Enter your name or email to vote:")
@@ -178,13 +178,14 @@ if voting_open:
         user_votes = {}
         for gin in gins:
             col1, col2 = st.columns([1, 4])
+            
             # Thumbnail
             thumbnail_path = THUMBNAILS_DIR / f"{gin}.png"
             if thumbnail_path.exists():
                 col1.image(Image.open(thumbnail_path), use_container_width=True)
-
-            # Slider with UNIQUE KEY
-            st.write(f"**{gin}**")
+            
+            # Gin name above the slider
+            col2.write(f"**{gin}**")
             score = col2.slider(
                 "",
                 min_value=1,
