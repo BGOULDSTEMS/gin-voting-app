@@ -120,7 +120,7 @@ title_col, img_col = st.columns([4, 1])
 title_col.header(settings.get("title", "Gin Judging Competition 🍸"))
 if settings.get("image") and Path(settings["image"]).exists():
     img = Image.open(settings["image"])
-    img_col.image(img, use_container_width=True)  # <-- fixed deprecation warning
+    img_col.image(img, use_container_width=True)
 
 # -------------------------------
 # COMPUTE AVERAGES
@@ -134,27 +134,28 @@ for gin, scores in all_votes.items():
 # LEADERBOARD
 # -------------------------------
 st.subheader("🏅 Live Leaderboard")
+sorted_gins = sorted(avg_scores, key=avg_scores.get, reverse=True)
+top_3 = sorted_gins[:3]
+
+top_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
+cols = st.columns(3)
+for i, gin in enumerate(top_3):
+    cols[i].metric(
+        label=f"Top {i+1}: {gin}",
+        value=f"{avg_scores[gin]:.2f}",
+        delta=f"{len(all_votes[gin])} votes",
+    )
+
+# Full leaderboard
 leaderboard_df = pd.DataFrame({
     "Gin": gins,
     "Average Score": [avg_scores[gin] for gin in gins],
     "Number of Votes": [len(all_votes[gin]) for gin in gins]
-})
-leaderboard_df = leaderboard_df.sort_values(by="Average Score", ascending=False).reset_index(drop=True)
-
-def highlight_top(row):
-    if row.name == 0:
-        return ["background-color: gold"]*3
-    elif row.name == 1:
-        return ["background-color: silver"]*3
-    elif row.name == 2:
-        return ["background-color: #CD7F32"]*3
-    else:
-        return [""]*3
-
-st.dataframe(leaderboard_df.style.apply(highlight_top, axis=1), use_container_width=True)
+}).sort_values(by="Average Score", ascending=False)
+st.dataframe(leaderboard_df, use_container_width=True)
 
 # -------------------------------
-# VOTING SECTION
+# VOTING SECTION (3 columns)
 # -------------------------------
 if voting_open:
     voter_id = st.text_input("Enter your name or email to vote:")
@@ -163,9 +164,10 @@ if voting_open:
         st.warning("You have already voted. Thank you!")
     elif voter_id:
         user_votes = {}
-        for gin in gins:
-            score = st.slider(f"Score for {gin}", 1, 10, 5)
-            user_votes[gin] = score
+        vote_cols = st.columns(3)
+        for i, gin in enumerate(gins):
+            col = vote_cols[i % 3]
+            user_votes[gin] = col.slider(gin, 1, 10, 5)
 
         if st.button("Submit Votes"):
             for gin, score in user_votes.items():
@@ -173,8 +175,7 @@ if voting_open:
             voters.add(voter_id)
             with open(VOTES_FILE, "w") as f:
                 json.dump({"votes": all_votes, "voters": list(voters)}, f)
-            pd.DataFrame({"Gin": list(user_votes.keys()), "Score": list(user_votes.values())}).set_index("Gin").to_csv(f"user_{voter_id}_votes.csv")
-            st.success("Thank you for voting! Your votes have been added.")
+            st.success("Thank you! Your votes have been submitted.")
 else:
     st.warning("Voting is currently CLOSED. Results are final.")
 
@@ -183,10 +184,7 @@ else:
 # -------------------------------
 if not voting_open and avg_scores:
     st.subheader("Top 3 Gins Vote Distribution")
-    top_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
-    sorted_gins = sorted(avg_scores, key=avg_scores.get, reverse=True)[:3]
-
-    for i, gin in enumerate(sorted_gins):
+    for i, gin in enumerate(top_3):
         st.markdown(f"### {gin} ({avg_scores[gin]:.2f} average, {len(all_votes[gin])} votes)")
         scores_counter = Counter(all_votes[gin])
         scores_list = [scores_counter.get(j, 0) for j in range(10, 0, -1)]
