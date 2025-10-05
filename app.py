@@ -120,7 +120,7 @@ title_col, img_col = st.columns([4, 1])
 title_col.header(settings.get("title", "Gin Judging Competition 🍸"))
 if settings.get("image") and Path(settings["image"]).exists():
     img = Image.open(settings["image"])
-    img_col.image(img, use_column_width=True)
+    img_col.image(img, use_container_width=True)  # <-- fixed deprecation warning
 
 # -------------------------------
 # COMPUTE AVERAGES
