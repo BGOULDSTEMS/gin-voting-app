@@ -131,22 +131,33 @@ for gin, scores in all_votes.items():
     avg_scores[gin] = sum(numeric_scores)/len(numeric_scores) if numeric_scores else 0
 
 # -------------------------------
-# LEADERBOARD
+# TOP 3 LEADERBOARD - CURRENT STANDINGS
 # -------------------------------
-st.subheader("🏅 Live Leaderboard")
-sorted_gins = sorted(avg_scores, key=avg_scores.get, reverse=True)
-top_3 = sorted_gins[:3]
+st.subheader("🏆 Current Standings")
 
-top_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
+medal_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]  # Gold, Silver, Bronze
+medal_names = ["Gold", "Silver", "Bronze"]
+
+top_3 = sorted(avg_scores, key=avg_scores.get, reverse=True)[:3]
+
 cols = st.columns(3)
 for i, gin in enumerate(top_3):
-    cols[i].metric(
-        label=f"Top {i+1}: {gin}",
-        value=f"{avg_scores[gin]:.2f}",
-        delta=f"{len(all_votes[gin])} votes",
+    avg = avg_scores[gin]
+    votes_count = len(all_votes[gin])
+    
+    # Display in colored box
+    cols[i].markdown(
+        f"""
+        <div style="background-color:{medal_colors[i]}; padding:15px; border-radius:10px; text-align:center">
+            <h3 style="margin:5px 0">{medal_names[i]} - {gin}</h3>
+            <h4 style="margin:5px 0">Score: {avg:.2f}</h4>
+            <p style="margin:5px 0">Votes: {votes_count}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-# Full leaderboard
+# Full leaderboard table
 leaderboard_df = pd.DataFrame({
     "Gin": gins,
     "Average Score": [avg_scores[gin] for gin in gins],
@@ -189,7 +200,7 @@ if not voting_open and avg_scores:
         scores_counter = Counter(all_votes[gin])
         scores_list = [scores_counter.get(j, 0) for j in range(10, 0, -1)]
         fig, ax = plt.subplots(figsize=(6,4))
-        ax.barh(range(10, 0, -1), scores_list, color=top_colors[i], edgecolor='black')
+        ax.barh(range(10, 0, -1), scores_list, color=medal_colors[i], edgecolor='black')
         ax.set_yticks(range(10, 0, -1))
         ax.set_yticklabels(range(10, 0, -1))
         ax.set_xlabel("Number of Votes")
