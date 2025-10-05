@@ -14,7 +14,7 @@ VOTES_FILE = Path("gin_votes.json")
 STATE_FILE = Path("voting_state.json")
 
 # --- Streamlit Cloud Public URL ---
-public_url = "https://<your-username>-gin-voting-app-main.streamlit.app"  # <-- replace with your deployed URL
+public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"  #
 
 # --- Initialize voting state ---
 if not STATE_FILE.exists():
