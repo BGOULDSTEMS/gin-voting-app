@@ -166,7 +166,7 @@ leaderboard_df = pd.DataFrame({
 st.dataframe(leaderboard_df, use_container_width=True)
 
 # -------------------------------
-# MOBILE-FRIENDLY CLICKABLE STAR VOTING
+# SLIDER VOTING
 # -------------------------------
 if voting_open:
     voter_id = st.text_input("Enter your name or email to vote:")
@@ -174,7 +174,7 @@ if voting_open:
     if voter_id and voter_id in voters:
         st.warning("You have already voted. Thank you!")
     elif voter_id:
-        st.markdown("### Tap the stars to vote (1–10)")
+        st.markdown("### Slide to vote (1–10)")
         user_votes = {}
         for gin in gins:
             col1, col2 = st.columns([1, 4])
@@ -183,16 +183,16 @@ if voting_open:
             if thumbnail_path.exists():
                 col1.image(Image.open(thumbnail_path), use_container_width=True)
 
-            # Star buttons with UNIQUE KEY
+            # Slider with UNIQUE KEY
             st.write(f"**{gin}**")
-            star_score = col2.radio(
+            score = col2.slider(
                 "",
-                options=list(range(1,11)),
-                format_func=lambda x: "★"*x + "☆"*(10-x),
-                horizontal=True,
-                key=f"star_{gin}"  # FIX for duplicate element id
+                min_value=1,
+                max_value=10,
+                value=5,
+                key=f"slider_{gin}"  # UNIQUE KEY
             )
-            user_votes[gin] = star_score
+            user_votes[gin] = score
 
         if st.button("Submit Votes"):
             for gin, score in user_votes.items():
