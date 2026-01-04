@@ -77,7 +77,14 @@ for gin in gins:
 # -------------------------------
 # ADMIN CONTROLS
 # -------------------------------
-st.sidebar.header("Admin Controls")
+with st.expander("🔐 Admin Controls", expanded=False):
+    admin_password = st.secrets.get("ADMIN_PASSWORD", "admin123")
+    entered_pw = st.text_input("Admin Password", type="password")
+    is_admin = entered_pw == admin_password
+
+    if is_admin:
+        if st.button("Open Voting"):
+            ...
 admin_password = st.secrets.get("ADMIN_PASSWORD", "admin123")  # set in secrets.toml
 
 entered_pw = st.sidebar.text_input("Admin Password", type="password")
