@@ -1,4 +1,11 @@
 import streamlit as st
+# -------------------------------
+# PAGE CONFIG (MUST BE FIRST)
+# -------------------------------
+st.set_page_config(
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 import qrcode
 import json
 import pandas as pd
