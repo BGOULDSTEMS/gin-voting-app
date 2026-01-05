@@ -60,7 +60,7 @@ for g in gins:
     comments.setdefault(g, [])
 
 # ----------------------------------
-# 🔐 ADMIN SIDEBAR (ALWAYS AVAILABLE)
+# 🔐 ADMIN SIDEBAR
 # ----------------------------------
 st.sidebar.title("🔐 Admin Panel")
 
@@ -176,33 +176,32 @@ elif phase == "presentation":
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
 
-    # Podium order: Bronze (lowest) bottom → Silver middle → Gold top
+    # Podium order: Bronze bottom → Silver middle → Gold top
     podium = [
         ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
         ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    # Positions for vertical layout (bottom → top)
-    positions = [600, 400, 200]  # y-pixel offsets, just for visual separation
+    # Vertical spacing for medals
+    positions = [600, 400, 200]  # from bottom to top
 
     for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
-
-        # Animation container
         medal_slot = st.empty()
         font_size = 70 if medal == "🥇 GOLD" else 45
 
-        # Horizontal floating animation
-    for shift in list(range(0, 21, 3)) + list(range(20, -1, -3)):  # left→right→left
-    medal_slot.markdown(
-        f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
-        unsafe_allow_html=True
-    )
-    time.sleep(0.1)
-
+        # Floating animation left-right for 2 cycles
+        shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
+        for _ in range(2):
+            for shift in shifts:
+                medal_slot.markdown(
+                    f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+                    unsafe_allow_html=True
+                )
+                time.sleep(0.1)
 
         # Show average score
         st.write(f"Average score: **{avg:.2f}**")
@@ -219,12 +218,11 @@ elif phase == "presentation":
             time.sleep(1)
 
 # ----------------------------------
-# UI CLEANUP (SAFE)
+# UI CLEANUP
 # ----------------------------------
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-/* Keep header visible so sidebar can be opened */
 </style>
 """, unsafe_allow_html=True)
