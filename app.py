@@ -12,7 +12,7 @@ from io import BytesIO
 STATE_FILE = "state.json"
 VOTES_FILE = "votes.json"
 COMMENTS_FILE = "comments.json"
-COCKTAILS_FILE = "cocktails.json"  # new
+COCKTAILS_FILE = "cocktails.json"
 
 PUBLIC_URL = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 
@@ -66,7 +66,6 @@ for g in gins:
 # 🔐 ADMIN SIDEBAR
 # ----------------------------------
 st.sidebar.title("🔐 Admin Panel")
-
 admin_pw = st.secrets.get("ADMIN_PASSWORD", "admin123")
 entered_pw = st.sidebar.text_input("Admin Password", type="password")
 
@@ -101,8 +100,8 @@ if entered_pw == admin_pw:
         json.dump({}, open(COCKTAILS_FILE, "w"))
         st.rerun()
 
-    # Download cocktail recipes CSV
-    if cocktails:
+    # Cocktail CSV only available after phase=closed
+    if phase == "closed" and cocktails:
         st.sidebar.subheader("Cocktail Recipes")
         df_cocktails = pd.DataFrame([
             {
@@ -166,16 +165,22 @@ elif phase == "open":
                 top_score = score
                 top_gin = gin
 
-            # After the last gin, show cocktail recipe button
-            if idx == len(gins) - 1:
-                if st.button("Gin Cocktail Recipe"):
-                    st.write("### Create Your Gin Cocktail")
-                    ice = st.radio("Did you add ice?", ["Yes", "No"], key=f"{voter}_ice")
-                    gin_amount = st.text_input("How much Gin?", key=f"{voter}_gin_amount")
-                    mixer = st.text_input("Mixer?", key=f"{voter}_mixer")
-                    garnish = st.text_input("Garnish?", key=f"{voter}_garnish")
-                    cocktail_name = st.text_input("Gin Cocktail Name", key=f"{voter}_cocktail_name")
-                    if st.button("Submit Cocktail"):
+        comment = st.text_area(
+            f"Why did you like {top_gin}?",
+            placeholder="Optional comment"
+        )
+
+        # After last gin, show cocktail recipe form
+        if len(gins) > 0:
+            with st.expander("🍹 Gin Cocktail Recipe (optional)"):
+                with st.form(f"cocktail_form_{voter}"):
+                    ice = st.radio("Did you add ice?", ["Yes", "No"])
+                    gin_amount = st.text_input("How much Gin?")
+                    mixer = st.text_input("Mixer?")
+                    garnish = st.text_input("Garnish?")
+                    cocktail_name = st.text_input("Gin Cocktail Name")
+                    submit_cocktail = st.form_submit_button("Submit Cocktail")
+                    if submit_cocktail:
                         cocktails[voter] = {
                             "ice": ice,
                             "gin_amount": gin_amount,
@@ -186,11 +191,7 @@ elif phase == "open":
                         json.dump(cocktails, open(COCKTAILS_FILE, "w"))
                         st.success("Your cocktail has been saved!")
 
-        comment = st.text_area(
-            f"Why did you like {top_gin}?",
-            placeholder="Optional comment"
-        )
-
+        # Submit votes + comment
         if st.button("Submit Vote"):
             for gin, s in scores.items():
                 votes.setdefault(gin, []).append(s)
