@@ -88,7 +88,7 @@ with st.expander("🔐 Admin Controls"):
 
         col1, col2, col3, col4 = st.columns(4)
 
-def set_phase(new_phase):
+    def set_phase(new_phase):
     with open(STATE_FILE, "w") as f:
         json.dump(
             {"phase": new_phase, "num_gins": num},
@@ -96,18 +96,18 @@ def set_phase(new_phase):
         )
     st.experimental_rerun()
 
-col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-if col1.button("🏁 Holding"):
+    if col1.button("🏁 Holding"):
     set_phase("holding")
 
-if col2.button("▶️ Open"):
+    if col2.button("▶️ Open"):
     set_phase("open")
 
-if col3.button("⏹ Close"):
+    if col3.button("⏹ Close"):
     set_phase("closed")
 
-if col4.button("🎉 Reveal Winner"):
+    if col4.button("🎉 Reveal Winner"):
     set_phase("presentation")
 
         if st.button("♻ Reset All Data"):
