@@ -10,7 +10,7 @@ from io import BytesIO
 # ----------------------------------
 STATE_FILE = "state.json"
 VOTES_FILE = "votes.json"
-COMMENTS_FILE = "comments.json"
+COMMENTS_FILE = "comments.json"  # will now store {"Gin 1": [{"name": "Ben", "comment": "Loved it"}]}
 
 PUBLIC_URL = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 
@@ -152,7 +152,7 @@ elif phase == "open":
             for gin, s in scores.items():
                 votes.setdefault(gin, []).append(s)
             if comment:
-                comments.setdefault(top_gin, []).append(comment)
+                comments.setdefault(top_gin, []).append({"name": voter, "comment": comment})
 
             json.dump(votes, open(VOTES_FILE, "w"))
             json.dump(comments, open(COMMENTS_FILE, "w"))
@@ -168,7 +168,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH BOTTOM-UP REVEAL
+# PRESENTATION PAGE WITH BOTTOM-UP REVEAL AND NAMED COMMENTS
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -176,23 +176,24 @@ elif phase == "presentation":
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
 
-    # Podium order: Bronze, Silver, Gold
+    # Podium order: Bronze → Silver → Gold (bottom → top)
     podium = [
         ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
         ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    positions = [600, 400, 200]  # approximate vertical spacing
-    font_sizes = [45, 55, 70]  # Bronze → Silver → Gold
+    positions = [600, 400, 200]  # vertical position for animation
+    font_sizes = [45, 55, 70]
 
-    # Reveal each medal bottom-up
+    # Reveal medals sequentially bottom → top
     for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
         medal_slot = st.empty()
-        # Float animation for 2 cycles
+
+        # Float animation
         shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
         for _ in range(2):
             for shift in shifts:
@@ -202,14 +203,15 @@ elif phase == "presentation":
                 )
                 time.sleep(0.1)
 
-        # Show average and comments after animation
+        # Display average score + named comments
         st.write(f"{medal} — Average score: **{avg:.2f}**")
         if comments.get(gin):
-            st.markdown("💬 What people said:")
             for c in comments[gin][:5]:
-                st.write(f"• {c}")
+                name = c.get("name", "Someone")
+                text = c.get("comment", "")
+                st.write(f"💬 {name} said: \"{text}\"")
 
-        # Confetti only for Gold
+        # Gold special
         if medal == "🥇 GOLD":
             st.balloons()
             time.sleep(1)
