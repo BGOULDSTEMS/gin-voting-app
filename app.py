@@ -70,56 +70,30 @@ for gin in gins:
 # -------------------------------
 # ADMIN PANEL
 # -------------------------------
-with st.expander("🔐 Admin Controls"):
-    admin_password = st.secrets.get("ADMIN_PASSWORD", "admin123")
-    entered_pw = st.text_input("Admin password", type="password")
-    is_admin = entered_pw == admin_password
+col1, col2, col3, col4 = st.columns(4)
 
-    if is_admin:
-        st.markdown("### Competition setup")
-
-        num = st.number_input(
-            "Number of gins in competition",
-            min_value=1,
-            max_value=50,
-            value=num_gins,
-            step=1
-        )
-
-        col1, col2, col3, col4 = st.columns(4)
-
-    def set_phase(new_phase):
+def set_phase(new_phase):
     with open(STATE_FILE, "w") as f:
         json.dump(
-            {"phase": new_phase, "num_gins": num},
+            {
+                "phase": new_phase,
+                "num_gins": num
+            },
             f
         )
     st.experimental_rerun()
 
-    col1, col2, col3, col4 = st.columns(4)
-
-    if col1.button("🏁 Holding"):
+if col1.button("🏁 Holding"):
     set_phase("holding")
 
-    if col2.button("▶️ Open"):
+if col2.button("▶️ Open"):
     set_phase("open")
 
-    if col3.button("⏹ Close"):
+if col3.button("⏹ Close"):
     set_phase("closed")
 
-    if col4.button("🎉 Reveal Winner"):
+if col4.button("🎉 Reveal Winner"):
     set_phase("presentation")
-
-        if st.button("♻ Reset All Data"):
-            all_votes = {g: [] for g in gins}
-            voters = set()
-            comments = {g: [] for g in gins}
-            with open(VOTES_FILE, "w") as f:
-                json.dump(
-                    {"votes": all_votes, "voters": [], "comments": comments},
-                    f
-                )
-            st.warning("All votes reset")
 
 # -------------------------------
 # TITLE
