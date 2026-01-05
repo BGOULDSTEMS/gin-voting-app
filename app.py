@@ -169,32 +169,44 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH ANIMATION
+# PRESENTATION PAGE WITH MEDAL ANIMATION
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
 
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
-    medals = ["🥉 BRONZE", "🥈 SILVER", "🥇 GOLD"]  # Reveal 3rd → 1st
 
-    for i, (gin, avg) in enumerate(ranked[:3]):
-        # 1. Small delay for dramatic effect
+    # 3rd → 2nd → 1st order
+    medal_info = [
+        ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
+        ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
+        ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
+    ]
+
+    for i, (medal, data) in enumerate(medal_info):
+        if data is None:
+            continue
+        gin, avg = data
+
         time.sleep(1.5)
 
-        # 2. Flying medal simulation via emoji & markdown
-        st.markdown(f"<h2 style='text-align:center; font-size:40px'>{medals[i]} — {gin}</h2>", unsafe_allow_html=True)
-        st.write(f"Average score: **{avg:.2f}**")
-
-        # 3. Show top comments if any
-        if comments.get(gin):
-            st.markdown("💬 What people said about this gin:")
-            for c in comments[gin][:5]:
-                st.write(f"• {c}")
-
-        # 4. Confetti effect for Gold (last medal)
-        if i == 2:
+        # Gold medal bigger font + confetti
+        if medal == "🥇 GOLD":
+            st.markdown(f"<h1 style='text-align:center; font-size:60px'>{medal} — {gin}</h1>", unsafe_allow_html=True)
+            st.write(f"Average score: **{avg:.2f}**")
+            if comments.get(gin):
+                st.markdown("💬 What people said:")
+                for c in comments[gin][:5]:
+                    st.write(f"• {c}")
             st.balloons()
+        else:
+            st.markdown(f"<h2 style='text-align:center; font-size:40px'>{medal} — {gin}</h2>", unsafe_allow_html=True)
+            st.write(f"Average score: **{avg:.2f}**")
+            if comments.get(gin):
+                st.markdown("💬 What people said:")
+                for c in comments[gin][:5]:
+                    st.write(f"• {c}")
 
 # ----------------------------------
 # UI CLEANUP (SAFE)
@@ -206,4 +218,3 @@ footer {visibility: hidden;}
 /* Keep header visible so sidebar can be opened */
 </style>
 """, unsafe_allow_html=True)
-
