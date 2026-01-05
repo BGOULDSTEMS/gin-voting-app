@@ -10,7 +10,7 @@ from io import BytesIO
 # ----------------------------------
 STATE_FILE = "state.json"
 VOTES_FILE = "votes.json"
-COMMENTS_FILE = "comments.json"  # will now store {"Gin 1": [{"name": "Ben", "comment": "Loved it"}]}
+COMMENTS_FILE = "comments.json"  # stores {"Gin Name": [{"name": "Ben", "comment": "..."}]}
 
 PUBLIC_URL = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 
@@ -168,7 +168,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH BOTTOM-UP REVEAL AND NAMED COMMENTS
+# PRESENTATION PAGE WITH TRUE BOTTOM-UP REVEAL
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -183,35 +183,36 @@ elif phase == "presentation":
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    positions = [600, 400, 200]  # vertical position for animation
-    font_sizes = [45, 55, 70]
+    # We'll use st.container() to control vertical ordering
+    containers = [st.container() for _ in podium]
 
-    # Reveal medals sequentially bottom → top
+    # Reveal sequentially bottom → top
     for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
-        medal_slot = st.empty()
+        container = containers[i]
 
-        # Float animation
+        # Floating animation within the container
+        medal_slot = container.empty()
         shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
         for _ in range(2):
             for shift in shifts:
                 medal_slot.markdown(
-                    f"<h1 style='text-align:center; font-size:{font_sizes[i]}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+                    f"<h1 style='text-align:center; font-size:{45 + i*15}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
                     unsafe_allow_html=True
                 )
                 time.sleep(0.1)
 
-        # Display average score + named comments
-        st.write(f"{medal} — Average score: **{avg:.2f}**")
+        # Show average and comments under each gin
+        container.write(f"{medal} — Average score: **{avg:.2f}**")
         if comments.get(gin):
             for c in comments[gin][:5]:
                 name = c.get("name", "Someone")
                 text = c.get("comment", "")
-                st.write(f"💬 {name} said: \"{text}\"")
+                container.write(f"💬 {name} said: \"{text}\"")
 
-        # Gold special
+        # Confetti only for Gold
         if medal == "🥇 GOLD":
             st.balloons()
             time.sleep(1)
