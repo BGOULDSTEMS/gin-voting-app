@@ -82,7 +82,7 @@ if entered_pw == admin_pw:
 
     if st.sidebar.button("Save Gin Count"):
         save_state({"phase": phase, "num_gins": new_num})
-        st.experimental_rerun()
+        st.rerun()
 
     st.sidebar.subheader("Competition Control")
 
