@@ -23,11 +23,7 @@ SETTINGS_FILE = Path("settings.json")
 
 public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 
-# -------------------------------
-# AUTO REFRESH
-# -------------------------------
-if phase in ["holding", "closed", "presentation"]:
-    st_autorefresh(interval=5000, key="refresh")
+
 # -------------------------------
 # INIT STATE
 # -------------------------------
@@ -43,6 +39,12 @@ with open(STATE_FILE, "r") as f:
 
 phase = state.get("phase", "holding")
 num_gins = state.get("num_gins", 30)
+
+# -----------
+# ADMIN REFRESH
+# -----------
+if phase in ["holding", "closed", "presentation"]:
+    st_autorefresh(interval=5000, key="refresh")
 
 # -------------------------------
 # GINS
