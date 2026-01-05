@@ -168,7 +168,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH PARTY REVEAL
+# PRESENTATION PAGE WITH BOTTOM-UP REVEAL
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -183,41 +183,36 @@ elif phase == "presentation":
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    # Vertical positions
-    positions = [600, 400, 200]
+    positions = [600, 400, 200]  # approximate vertical spacing
+    font_sizes = [45, 55, 70]  # Bronze → Silver → Gold
 
-    # Create empty containers for all three medals
-    containers = [st.empty() for _ in podium]
-
-    # Horizontal shift animation
-    shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
-    for _ in range(3):  # repeat 3 cycles for party effect
-        for shift in shifts:
-            for i, (medal, data) in enumerate(podium):
-                if data is None:
-                    continue
-                gin, avg = data
-                font_size = 70 if medal == "🥇 GOLD" else 45
-                containers[i].markdown(
-                    f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
-                    unsafe_allow_html=True
-                )
-            time.sleep(0.1)
-
-    # After animation, display average scores + comments
+    # Reveal each medal bottom-up
     for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
+        medal_slot = st.empty()
+        # Float animation for 2 cycles
+        shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
+        for _ in range(2):
+            for shift in shifts:
+                medal_slot.markdown(
+                    f"<h1 style='text-align:center; font-size:{font_sizes[i]}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+                    unsafe_allow_html=True
+                )
+                time.sleep(0.1)
+
+        # Show average and comments after animation
         st.write(f"{medal} — Average score: **{avg:.2f}**")
         if comments.get(gin):
             st.markdown("💬 What people said:")
             for c in comments[gin][:5]:
                 st.write(f"• {c}")
 
-    # Confetti for Gold
-    st.balloons()
-    time.sleep(1)
+        # Confetti only for Gold
+        if medal == "🥇 GOLD":
+            st.balloons()
+            time.sleep(1)
 
 # ----------------------------------
 # UI CLEANUP
