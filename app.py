@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import os
 import time
-import pandas as pd
 import qrcode
 from io import BytesIO
 
@@ -169,7 +168,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH MEDAL ANIMATION
+# PRESENTATION PAGE WITH ANIMATION
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -177,11 +176,11 @@ elif phase == "presentation":
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
 
-    # 3rd → 2nd → 1st order
+    # Gold top, Silver middle, Bronze bottom
     medal_info = [
-        ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
-        ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
+        ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
+        ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
     ]
 
     for i, (medal, data) in enumerate(medal_info):
@@ -189,24 +188,31 @@ elif phase == "presentation":
             continue
         gin, avg = data
 
-        time.sleep(1.5)
+        # Animation container
+        medal_slot = st.empty()
 
-        # Gold medal bigger font + confetti
+        # Slight horizontal movement animation
+        for shift in range(0, 21, 4):  # moves 0 → 20px right
+            font_size = 60 if medal == "🥇 GOLD" else 40
+            medal_slot.markdown(
+                f"<h1 style='text-align:center; font-size:{font_size}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+                unsafe_allow_html=True
+            )
+            time.sleep(0.15)
+
+        # Average score
+        st.write(f"Average score: **{avg:.2f}**")
+
+        # Comments
+        if comments.get(gin):
+            st.markdown("💬 What people said:")
+            for c in comments[gin][:5]:
+                st.write(f"• {c}")
+
+        # Confetti for Gold
         if medal == "🥇 GOLD":
-            st.markdown(f"<h1 style='text-align:center; font-size:60px'>{medal} — {gin}</h1>", unsafe_allow_html=True)
-            st.write(f"Average score: **{avg:.2f}**")
-            if comments.get(gin):
-                st.markdown("💬 What people said:")
-                for c in comments[gin][:5]:
-                    st.write(f"• {c}")
             st.balloons()
-        else:
-            st.markdown(f"<h2 style='text-align:center; font-size:40px'>{medal} — {gin}</h2>", unsafe_allow_html=True)
-            st.write(f"Average score: **{avg:.2f}**")
-            if comments.get(gin):
-                st.markdown("💬 What people said:")
-                for c in comments[gin][:5]:
-                    st.write(f"• {c}")
+            time.sleep(1)
 
 # ----------------------------------
 # UI CLEANUP (SAFE)
