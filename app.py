@@ -168,7 +168,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH FLOATING MEDALS
+# PRESENTATION PAGE WITH PARTY REVEAL
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -176,46 +176,48 @@ elif phase == "presentation":
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
 
-    # Podium order: Bronze bottom → Silver middle → Gold top
+    # Podium order: Bronze, Silver, Gold
     podium = [
         ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
         ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    # Vertical spacing for medals
-    positions = [600, 400, 200]  # from bottom to top
+    # Vertical positions
+    positions = [600, 400, 200]
 
+    # Create empty containers for all three medals
+    containers = [st.empty() for _ in podium]
+
+    # Horizontal shift animation
+    shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
+    for _ in range(3):  # repeat 3 cycles for party effect
+        for shift in shifts:
+            for i, (medal, data) in enumerate(podium):
+                if data is None:
+                    continue
+                gin, avg = data
+                font_size = 70 if medal == "🥇 GOLD" else 45
+                containers[i].markdown(
+                    f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+                    unsafe_allow_html=True
+                )
+            time.sleep(0.1)
+
+    # After animation, display average scores + comments
     for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
-        medal_slot = st.empty()
-        font_size = 70 if medal == "🥇 GOLD" else 45
-
-        # Floating animation left-right for 2 cycles
-        shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
-        for _ in range(2):
-            for shift in shifts:
-                medal_slot.markdown(
-                    f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
-                    unsafe_allow_html=True
-                )
-                time.sleep(0.1)
-
-        # Show average score
-        st.write(f"Average score: **{avg:.2f}**")
-
-        # Show comments
+        st.write(f"{medal} — Average score: **{avg:.2f}**")
         if comments.get(gin):
             st.markdown("💬 What people said:")
             for c in comments[gin][:5]:
                 st.write(f"• {c}")
 
-        # Confetti for Gold
-        if medal == "🥇 GOLD":
-            st.balloons()
-            time.sleep(1)
+    # Confetti for Gold
+    st.balloons()
+    time.sleep(1)
 
 # ----------------------------------
 # UI CLEANUP
