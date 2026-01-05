@@ -26,8 +26,8 @@ public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 # -------------------------------
 # AUTO REFRESH
 # -------------------------------
-st_autorefresh(interval=5000, key="refresh")
-
+if phase in ["holding", "closed", "presentation"]:
+    st_autorefresh(interval=5000, key="refresh")
 # -------------------------------
 # INIT STATE
 # -------------------------------
@@ -88,26 +88,27 @@ with st.expander("🔐 Admin Controls"):
 
         col1, col2, col3, col4 = st.columns(4)
 
-        if col1.button("🏁 Holding"):
-            phase = "holding"
+def set_phase(new_phase):
+    with open(STATE_FILE, "w") as f:
+        json.dump(
+            {"phase": new_phase, "num_gins": num},
+            f
+        )
+    st.experimental_rerun()
 
-        if col2.button("▶️ Open"):
-            phase = "open"
+col1, col2, col3, col4 = st.columns(4)
 
-        if col3.button("⏹ Close"):
-            phase = "closed"
+if col1.button("🏁 Holding"):
+    set_phase("holding")
 
-        if col4.button("🎉 Reveal Winner"):
-            phase = "presentation"
+if col2.button("▶️ Open"):
+    set_phase("open")
 
-        if st.button("💾 Save Settings"):
-            with open(STATE_FILE, "w") as f:
-                json.dump(
-                    {"phase": phase, "num_gins": num},
-                    f
-                )
-            st.success("Settings saved")
-            st.experimental_rerun()
+if col3.button("⏹ Close"):
+    set_phase("closed")
+
+if col4.button("🎉 Reveal Winner"):
+    set_phase("presentation")
 
         if st.button("♻ Reset All Data"):
             all_votes = {g: [] for g in gins}
