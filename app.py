@@ -3,6 +3,7 @@ import json
 import os
 import time
 import qrcode
+import pandas as pd
 from io import BytesIO
 
 # ----------------------------------
@@ -10,7 +11,8 @@ from io import BytesIO
 # ----------------------------------
 STATE_FILE = "state.json"
 VOTES_FILE = "votes.json"
-COMMENTS_FILE = "comments.json"  # stores {"Gin Name": [{"name": "Ben", "comment": "..."}]}
+COMMENTS_FILE = "comments.json"
+COCKTAILS_FILE = "cocktails.json"  # new
 
 PUBLIC_URL = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 
@@ -53,6 +55,7 @@ def load_json(file, default):
 
 votes = load_json(VOTES_FILE, {})
 comments = load_json(COMMENTS_FILE, {})
+cocktails = load_json(COCKTAILS_FILE, {})
 
 gins = [f"Gin {i+1}" for i in range(num_gins)]
 for g in gins:
@@ -95,7 +98,27 @@ if entered_pw == admin_pw:
         save_state(DEFAULT_STATE)
         json.dump({}, open(VOTES_FILE, "w"))
         json.dump({}, open(COMMENTS_FILE, "w"))
+        json.dump({}, open(COCKTAILS_FILE, "w"))
         st.rerun()
+
+    # Download cocktail recipes CSV
+    if cocktails:
+        st.sidebar.subheader("Cocktail Recipes")
+        df_cocktails = pd.DataFrame([
+            {
+                "Participant": p,
+                "Did you add ice?": data.get("ice", ""),
+                "How much Gin?": data.get("gin_amount", ""),
+                "Mixer?": data.get("mixer", ""),
+                "Garnish?": data.get("garnish", ""),
+                "Gin Cocktail Name": data.get("name", "")
+            }
+            for p, data in cocktails.items()
+        ])
+        st.sidebar.download_button("Download Cocktail Recipes CSV",
+                                   df_cocktails.to_csv(index=False),
+                                   "cocktails.csv",
+                                   "text/csv")
 else:
     st.sidebar.info("Enter admin password to control the competition")
 
@@ -136,12 +159,32 @@ elif phase == "open":
         top_gin = None
         top_score = -1
 
-        for gin in gins:
+        for idx, gin in enumerate(gins):
             score = st.slider(gin, 1, 10, 5, key=f"{voter}_{gin}")
             scores[gin] = score
             if score > top_score:
                 top_score = score
                 top_gin = gin
+
+            # After the last gin, show cocktail recipe button
+            if idx == len(gins) - 1:
+                if st.button("Gin Cocktail Recipe"):
+                    st.write("### Create Your Gin Cocktail")
+                    ice = st.radio("Did you add ice?", ["Yes", "No"], key=f"{voter}_ice")
+                    gin_amount = st.text_input("How much Gin?", key=f"{voter}_gin_amount")
+                    mixer = st.text_input("Mixer?", key=f"{voter}_mixer")
+                    garnish = st.text_input("Garnish?", key=f"{voter}_garnish")
+                    cocktail_name = st.text_input("Gin Cocktail Name", key=f"{voter}_cocktail_name")
+                    if st.button("Submit Cocktail"):
+                        cocktails[voter] = {
+                            "ice": ice,
+                            "gin_amount": gin_amount,
+                            "mixer": mixer,
+                            "garnish": garnish,
+                            "name": cocktail_name
+                        }
+                        json.dump(cocktails, open(COCKTAILS_FILE, "w"))
+                        st.success("Your cocktail has been saved!")
 
         comment = st.text_area(
             f"Why did you like {top_gin}?",
@@ -168,7 +211,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH TRUE BOTTOM-UP REVEAL
+# PRESENTATION PAGE
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -176,24 +219,20 @@ elif phase == "presentation":
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
 
-    # Podium order: Bronze → Silver → Gold (bottom → top)
     podium = [
         ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
         ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
         ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    # We'll use st.container() to control vertical ordering
     containers = [st.container() for _ in podium]
 
-    # Reveal sequentially bottom → top
     for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
         container = containers[i]
 
-        # Floating animation within the container
         medal_slot = container.empty()
         shifts = list(range(0, 21, 3)) + list(range(20, -1, -3))
         for _ in range(2):
@@ -204,7 +243,6 @@ elif phase == "presentation":
                 )
                 time.sleep(0.1)
 
-        # Show average and comments under each gin
         container.write(f"{medal} — Average score: **{avg:.2f}**")
         if comments.get(gin):
             for c in comments[gin][:5]:
@@ -212,7 +250,6 @@ elif phase == "presentation":
                 text = c.get("comment", "")
                 container.write(f"💬 {name} said: \"{text}\"")
 
-        # Confetti only for Gold
         if medal == "🥇 GOLD":
             st.balloons()
             time.sleep(1)
