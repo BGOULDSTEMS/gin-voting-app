@@ -5,7 +5,6 @@ import time
 import pandas as pd
 import qrcode
 from io import BytesIO
-from collections import Counter
 
 # ----------------------------------
 # CONFIG
@@ -62,14 +61,15 @@ for g in gins:
     comments.setdefault(g, [])
 
 # ----------------------------------
-# SIDEBAR ADMIN
+# 🔐 ADMIN SIDEBAR (ALWAYS AVAILABLE)
 # ----------------------------------
-st.sidebar.header("Admin Controls")
+st.sidebar.title("🔐 Admin Panel")
 
 admin_pw = st.secrets.get("ADMIN_PASSWORD", "admin123")
 entered_pw = st.sidebar.text_input("Admin Password", type="password")
 
 if entered_pw == admin_pw:
+    st.sidebar.success("Admin authenticated")
 
     st.sidebar.subheader("Competition Setup")
 
@@ -84,7 +84,7 @@ if entered_pw == admin_pw:
         save_state({"phase": phase, "num_gins": new_num})
         st.experimental_rerun()
 
-    st.sidebar.subheader("Competition Flow")
+    st.sidebar.subheader("Competition Control")
 
     if st.sidebar.button("Open Competition"):
         save_state({"phase": "open", "num_gins": num_gins})
@@ -104,8 +104,11 @@ if entered_pw == admin_pw:
         json.dump({}, open(COMMENTS_FILE, "w"))
         st.experimental_rerun()
 
+else:
+    st.sidebar.info("Enter admin password to control the competition")
+
 # ----------------------------------
-# AUTO REFRESH (SAFE)
+# AUTO REFRESH
 # ----------------------------------
 if phase in ["holding", "closed"]:
     from streamlit_autorefresh import st_autorefresh
@@ -125,40 +128,38 @@ def show_qr():
 # ----------------------------------
 if phase == "holding":
     st.title("🍸 Gin Judging Competition")
-    st.subheader("Get ready…")
-    st.write("Voting will open shortly. Please scan the QR code and be prepared.")
+    st.subheader("Please stand by…")
+    st.write("Voting will open shortly. Scan the QR code to be ready.")
     show_qr()
 
 # ----------------------------------
 # VOTING PAGE
 # ----------------------------------
 elif phase == "open":
-    st.title("🍸 Vote for Your Favourite Gin")
+    st.title("🍸 Cast Your Votes")
 
     voter = st.text_input("Your name or email")
 
     if voter:
-        user_scores = {}
+        scores = {}
         top_gin = None
         top_score = -1
 
         for gin in gins:
             score = st.slider(gin, 1, 10, 5, key=f"{voter}_{gin}")
-            user_scores[gin] = score
-
+            scores[gin] = score
             if score > top_score:
                 top_score = score
                 top_gin = gin
 
         comment = st.text_area(
             f"Why did you like {top_gin}?",
-            placeholder="Optional comment for your top gin"
+            placeholder="Optional comment"
         )
 
         if st.button("Submit Vote"):
-            for gin, score in user_scores.items():
-                votes.setdefault(gin, []).append(score)
-
+            for gin, s in scores.items():
+                votes.setdefault(gin, []).append(s)
             if comment:
                 comments.setdefault(top_gin, []).append(comment)
 
@@ -182,31 +183,30 @@ elif phase == "presentation":
     st.title("🏆 Final Standings")
 
     averages = {
-        gin: sum(scores)/len(scores) if scores else 0
-        for gin, scores in votes.items()
+        gin: sum(v)/len(v) if v else 0
+        for gin, v in votes.items()
     }
 
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
     medals = ["🥇 GOLD", "🥈 SILVER", "🥉 BRONZE"]
 
     for i, (gin, avg) in enumerate(ranked[:3]):
-        with st.container():
-            time.sleep(1.5)
-            st.subheader(f"{medals[i]} — {gin}")
-            st.write(f"Average score: **{avg:.2f}**")
+        time.sleep(1.2)
+        st.subheader(f"{medals[i]} — {gin}")
+        st.write(f"Average score: **{avg:.2f}**")
 
-            if comments.get(gin):
-                st.markdown("💬 What people said:")
-                for c in comments[gin][:5]:
-                    st.write(f"• {c}")
+        if comments.get(gin):
+            st.markdown("💬 What people said:")
+            for c in comments[gin][:5]:
+                st.write(f"• {c}")
 
 # ----------------------------------
-# HIDE STREAMLIT UI
+# UI CLEANUP (SAFE)
 # ----------------------------------
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
+/* DO NOT hide header — needed to reopen sidebar */
 </style>
 """, unsafe_allow_html=True)
