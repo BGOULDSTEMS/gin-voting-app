@@ -100,8 +100,8 @@ if entered_pw == admin_pw:
         json.dump({}, open(COCKTAILS_FILE, "w"))
         st.rerun()
 
-    # Cocktail CSV only available after phase=closed
-    if phase == "closed" and cocktails:
+    # Cocktail CSV button now available in CLOSED or PRESENTATION phases
+    if phase in ["closed", "presentation"] and cocktails:
         st.sidebar.subheader("Cocktail Recipes")
         df_cocktails = pd.DataFrame([
             {
@@ -110,6 +110,7 @@ if entered_pw == admin_pw:
                 "How much Gin?": data.get("gin_amount", ""),
                 "Mixer?": data.get("mixer", ""),
                 "Garnish?": data.get("garnish", ""),
+                "Other notes": data.get("notes", ""),
                 "Gin Cocktail Name": data.get("name", "")
             }
             for p, data in cocktails.items()
@@ -178,6 +179,7 @@ elif phase == "open":
                     gin_amount = st.text_input("How much Gin?")
                     mixer = st.text_input("Mixer?")
                     garnish = st.text_input("Garnish?")
+                    notes = st.text_input("Any other notes - e.g., Add 3 splashes of Angostura, or muddle some mint in there!")
                     cocktail_name = st.text_input("Gin Cocktail Name")
                     submit_cocktail = st.form_submit_button("Submit Cocktail")
                     if submit_cocktail:
@@ -186,6 +188,7 @@ elif phase == "open":
                             "gin_amount": gin_amount,
                             "mixer": mixer,
                             "garnish": garnish,
+                            "notes": notes,
                             "name": cocktail_name
                         }
                         json.dump(cocktails, open(COCKTAILS_FILE, "w"))
