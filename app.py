@@ -196,12 +196,13 @@ elif phase == "presentation":
         font_size = 70 if medal == "🥇 GOLD" else 45
 
         # Horizontal floating animation
-        for shift in range(0, 21, 3) + list(range(20, -1, -3)):  # left→right→left
-            medal_slot.markdown(
-                f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
-                unsafe_allow_html=True
-            )
-            time.sleep(0.1)
+    for shift in list(range(0, 21, 3)) + list(range(20, -1, -3)):  # left→right→left
+    medal_slot.markdown(
+        f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+        unsafe_allow_html=True
+    )
+    time.sleep(0.1)
+
 
         # Show average score
         st.write(f"Average score: **{avg:.2f}**")
