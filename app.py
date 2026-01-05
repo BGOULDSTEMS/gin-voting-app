@@ -88,21 +88,21 @@ if entered_pw == admin_pw:
 
     if st.sidebar.button("Open Competition"):
         save_state({"phase": "open", "num_gins": num_gins})
-        st.experimental_rerun()
+        st.rerun()
 
     if st.sidebar.button("Close Competition"):
         save_state({"phase": "closed", "num_gins": num_gins})
-        st.experimental_rerun()
+        st.rerun()
 
     if st.sidebar.button("Reveal Winner"):
         save_state({"phase": "presentation", "num_gins": num_gins})
-        st.experimental_rerun()
+        st.rerun()
 
     if st.sidebar.button("Reset Everything"):
         save_state(DEFAULT_STATE)
         json.dump({}, open(VOTES_FILE, "w"))
         json.dump({}, open(COMMENTS_FILE, "w"))
-        st.experimental_rerun()
+        st.rerun()
 
 else:
     st.sidebar.info("Enter admin password to control the competition")
