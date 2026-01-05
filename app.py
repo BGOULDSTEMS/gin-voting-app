@@ -1,223 +1,212 @@
 import streamlit as st
-import qrcode
 import json
-import pandas as pd
+import os
 import time
+import pandas as pd
+import qrcode
 from io import BytesIO
-from pathlib import Path
 from collections import Counter
-from PIL import Image
-from streamlit_autorefresh import st_autorefresh
 
-# -------------------------------
-# PAGE CONFIG
-# -------------------------------
-st.set_page_config(layout="wide")
+# ----------------------------------
+# CONFIG
+# ----------------------------------
+STATE_FILE = "state.json"
+VOTES_FILE = "votes.json"
+COMMENTS_FILE = "comments.json"
 
-# -------------------------------
-# FILES
-# -------------------------------
-VOTES_FILE = Path("gin_votes.json")
-STATE_FILE = Path("voting_state.json")
-SETTINGS_FILE = Path("settings.json")
+PUBLIC_URL = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
 
-public_url = "https://gin-voting-app-aiwp54kyxjdaxba3aaqqth.streamlit.app/"
+DEFAULT_STATE = {
+    "phase": "holding",   # holding | open | closed | presentation
+    "num_gins": 10
+}
 
+# ----------------------------------
+# SAFE STATE HANDLING
+# ----------------------------------
+def load_state():
+    if not os.path.exists(STATE_FILE):
+        return DEFAULT_STATE.copy()
+    try:
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return DEFAULT_STATE.copy()
 
-# -------------------------------
-# INIT STATE
-# -------------------------------
-if not STATE_FILE.exists():
+def save_state(state):
     with open(STATE_FILE, "w") as f:
-        json.dump(
-            {"phase": "holding", "num_gins": 30},
-            f
-        )
+        json.dump(state, f)
 
-with open(STATE_FILE, "r") as f:
-    state = json.load(f)
+state = load_state()
+phase = state["phase"]
+num_gins = state["num_gins"]
 
-phase = state.get("phase", "holding")
-num_gins = state.get("num_gins", 30)
+# ----------------------------------
+# SAFE DATA LOADERS
+# ----------------------------------
+def load_json(file, default):
+    if not os.path.exists(file):
+        return default
+    try:
+        with open(file, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return default
 
-# -----------
-# ADMIN REFRESH
-# -----------
-if phase in ["holding", "closed", "presentation"]:
-    st_autorefresh(interval=5000, key="refresh")
+votes = load_json(VOTES_FILE, {})
+comments = load_json(COMMENTS_FILE, {})
 
-# -------------------------------
-# GINS
-# -------------------------------
-gins = [f"Gin {i}" for i in range(1, num_gins + 1)]
+gins = [f"Gin {i+1}" for i in range(num_gins)]
+for g in gins:
+    votes.setdefault(g, [])
+    comments.setdefault(g, [])
 
-# -------------------------------
-# LOAD VOTES
-# -------------------------------
-if VOTES_FILE.exists():
-    with open(VOTES_FILE, "r") as f:
-        data = json.load(f)
-        all_votes = data.get("votes", {})
-        voters = set(data.get("voters", []))
-        comments = data.get("comments", {})
-else:
-    all_votes = {}
-    voters = set()
-    comments = {}
+# ----------------------------------
+# SIDEBAR ADMIN
+# ----------------------------------
+st.sidebar.header("Admin Controls")
 
-for gin in gins:
-    all_votes.setdefault(gin, [])
-    comments.setdefault(gin, [])
+admin_pw = st.secrets.get("ADMIN_PASSWORD", "admin123")
+entered_pw = st.sidebar.text_input("Admin Password", type="password")
 
-# -------------------------------
-# ADMIN PANEL
-# -------------------------------
-col1, col2, col3, col4 = st.columns(4)
+if entered_pw == admin_pw:
 
-def set_phase(new_phase):
-    with open(STATE_FILE, "w") as f:
-        json.dump(
-            {
-                "phase": new_phase,
-                "num_gins": num
-            },
-            f
-        )
-    st.experimental_rerun()
+    st.sidebar.subheader("Competition Setup")
 
-if col1.button("🏁 Holding"):
-    set_phase("holding")
-
-if col2.button("▶️ Open"):
-    set_phase("open")
-
-if col3.button("⏹ Close"):
-    set_phase("closed")
-
-if col4.button("🎉 Reveal Winner"):
-    set_phase("presentation")
-
-# -------------------------------
-# TITLE
-# -------------------------------
-st.markdown("# 🍸 Gin Judging Competition")
-
-# -------------------------------
-# QR CODE FUNCTION
-# -------------------------------
-def show_qr():
-    qr = qrcode.QRCode(box_size=5, border=2)
-    qr.add_data(public_url)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    st.image(buf.getvalue(), caption="Scan to join")
-
-# -------------------------------
-# HOLDING PAGE
-# -------------------------------
-if phase == "holding":
-    st.markdown("## Competition starting soon…")
-    st.markdown("Please scan the QR code to get ready.")
-    show_qr()
-    st.stop()
-
-# -------------------------------
-# VOTING
-# -------------------------------
-if phase == "open":
-    voter_id = st.text_input("Enter your name or email")
-
-    if voter_id in voters:
-        st.warning("You have already voted.")
-        st.stop()
-
-    user_votes = {}
-    for gin in gins:
-        user_votes[gin] = st.slider(gin, 1, 10, 5)
-
-    top_gin = max(user_votes, key=user_votes.get)
-
-    comment = st.text_area(
-        f"What did you love about {top_gin}?",
-        max_chars=300
+    new_num = st.sidebar.number_input(
+        "Number of gins",
+        min_value=1,
+        max_value=50,
+        value=num_gins
     )
 
-    if st.button("Submit Votes"):
-        for gin, score in user_votes.items():
-            all_votes[gin].append(score)
+    if st.sidebar.button("Save Gin Count"):
+        save_state({"phase": phase, "num_gins": new_num})
+        st.experimental_rerun()
 
-        if comment:
-            comments[top_gin].append(comment)
+    st.sidebar.subheader("Competition Flow")
 
-        voters.add(voter_id)
+    if st.sidebar.button("Open Competition"):
+        save_state({"phase": "open", "num_gins": num_gins})
+        st.experimental_rerun()
 
-        with open(VOTES_FILE, "w") as f:
-            json.dump(
-                {
-                    "votes": all_votes,
-                    "voters": list(voters),
-                    "comments": comments
-                },
-                f
-            )
+    if st.sidebar.button("Close Competition"):
+        save_state({"phase": "closed", "num_gins": num_gins})
+        st.experimental_rerun()
 
-        st.success("Thank you for voting!")
-        st.balloons()
+    if st.sidebar.button("Reveal Winner"):
+        save_state({"phase": "presentation", "num_gins": num_gins})
+        st.experimental_rerun()
 
-# -------------------------------
-# CLOSED
-# -------------------------------
-if phase == "closed":
-    st.markdown("## Voting has closed")
-    st.markdown("Please wait for the final reveal.")
-    st.stop()
+    if st.sidebar.button("Reset Everything"):
+        save_state(DEFAULT_STATE)
+        json.dump({}, open(VOTES_FILE, "w"))
+        json.dump({}, open(COMMENTS_FILE, "w"))
+        st.experimental_rerun()
 
-# -------------------------------
-# FINAL PRESENTATION
-# -------------------------------
-if phase == "presentation":
+# ----------------------------------
+# AUTO REFRESH (SAFE)
+# ----------------------------------
+if phase in ["holding", "closed"]:
+    from streamlit_autorefresh import st_autorefresh
+    st_autorefresh(interval=5000, key="refresh")
 
-    avg_scores = {
-        gin: sum(v)/len(v) if v else 0
-        for gin, v in all_votes.items()
+# ----------------------------------
+# QR CODE
+# ----------------------------------
+def show_qr():
+    qr = qrcode.make(PUBLIC_URL)
+    buf = BytesIO()
+    qr.save(buf)
+    st.image(buf.getvalue(), caption="Scan to join")
+
+# ----------------------------------
+# HOLDING PAGE
+# ----------------------------------
+if phase == "holding":
+    st.title("🍸 Gin Judging Competition")
+    st.subheader("Get ready…")
+    st.write("Voting will open shortly. Please scan the QR code and be prepared.")
+    show_qr()
+
+# ----------------------------------
+# VOTING PAGE
+# ----------------------------------
+elif phase == "open":
+    st.title("🍸 Vote for Your Favourite Gin")
+
+    voter = st.text_input("Your name or email")
+
+    if voter:
+        user_scores = {}
+        top_gin = None
+        top_score = -1
+
+        for gin in gins:
+            score = st.slider(gin, 1, 10, 5, key=f"{voter}_{gin}")
+            user_scores[gin] = score
+
+            if score > top_score:
+                top_score = score
+                top_gin = gin
+
+        comment = st.text_area(
+            f"Why did you like {top_gin}?",
+            placeholder="Optional comment for your top gin"
+        )
+
+        if st.button("Submit Vote"):
+            for gin, score in user_scores.items():
+                votes.setdefault(gin, []).append(score)
+
+            if comment:
+                comments.setdefault(top_gin, []).append(comment)
+
+            json.dump(votes, open(VOTES_FILE, "w"))
+            json.dump(comments, open(COMMENTS_FILE, "w"))
+
+            st.success("Thank you for voting!")
+
+# ----------------------------------
+# CLOSED PAGE
+# ----------------------------------
+elif phase == "closed":
+    st.title("⏳ Voting Closed")
+    st.write("Results are being prepared…")
+    show_qr()
+
+# ----------------------------------
+# PRESENTATION PAGE
+# ----------------------------------
+elif phase == "presentation":
+    st.title("🏆 Final Standings")
+
+    averages = {
+        gin: sum(scores)/len(scores) if scores else 0
+        for gin, scores in votes.items()
     }
 
-    top_3 = sorted(avg_scores, key=avg_scores.get, reverse=True)[:3]
+    ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
+    medals = ["🥇 GOLD", "🥈 SILVER", "🥉 BRONZE"]
 
-    st.markdown("## 🎉 Final Standings")
-    placeholder = st.empty()
+    for i, (gin, avg) in enumerate(ranked[:3]):
+        with st.container():
+            time.sleep(1.5)
+            st.subheader(f"{medals[i]} — {gin}")
+            st.write(f"Average score: **{avg:.2f}**")
 
-    medals = [
-        ("🥉 Bronze", top_3[2]),
-        ("🥈 Silver", top_3[1]),
-        ("🥇 Gold", top_3[0])
-    ]
+            if comments.get(gin):
+                st.markdown("💬 What people said:")
+                for c in comments[gin][:5]:
+                    st.write(f"• {c}")
 
-    for medal, gin in medals:
-        placeholder.markdown(
-            f"## {medal}\n### {gin} — {avg_scores[gin]:.2f}"
-        )
-        time.sleep(2)
-
-    st.balloons()
-
-    st.markdown("## 💬 What people loved about the winner")
-
-    for c in comments.get(top_3[0], [])[:5]:
-        st.markdown(f"> *{c}*")
-        time.sleep(1)
-
-# -------------------------------
-# FOOTER CLEANUP
-# -------------------------------
-st.markdown(
-    """
-    <style>
-    #MainMenu {visibility:hidden;}
-    footer {visibility:hidden;}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# ----------------------------------
+# HIDE STREAMLIT UI
+# ----------------------------------
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
