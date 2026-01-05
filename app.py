@@ -168,7 +168,7 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE WITH ANIMATION
+# PRESENTATION PAGE WITH FLOATING MEDALS
 # ----------------------------------
 elif phase == "presentation":
     st.title("🏆 Final Standings 🎉")
@@ -176,34 +176,37 @@ elif phase == "presentation":
     averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
 
-    # Gold top, Silver middle, Bronze bottom
-    medal_info = [
-        ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
-        ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
+    # Podium order: Bronze (lowest) bottom → Silver middle → Gold top
+    podium = [
         ("🥉 BRONZE", ranked[2] if len(ranked) > 2 else None),
+        ("🥈 SILVER", ranked[1] if len(ranked) > 1 else None),
+        ("🥇 GOLD", ranked[0] if len(ranked) > 0 else None),
     ]
 
-    for i, (medal, data) in enumerate(medal_info):
+    # Positions for vertical layout (bottom → top)
+    positions = [600, 400, 200]  # y-pixel offsets, just for visual separation
+
+    for i, (medal, data) in enumerate(podium):
         if data is None:
             continue
         gin, avg = data
 
         # Animation container
         medal_slot = st.empty()
+        font_size = 70 if medal == "🥇 GOLD" else 45
 
-        # Slight horizontal movement animation
-        for shift in range(0, 21, 4):  # moves 0 → 20px right
-            font_size = 60 if medal == "🥇 GOLD" else 40
+        # Horizontal floating animation
+        for shift in range(0, 21, 3) + list(range(20, -1, -3)):  # left→right→left
             medal_slot.markdown(
-                f"<h1 style='text-align:center; font-size:{font_size}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
+                f"<h1 style='text-align:center; font-size:{font_size}px; margin-top:{positions[i]}px; margin-left:{shift}px'>{medal} — {gin}</h1>",
                 unsafe_allow_html=True
             )
-            time.sleep(0.15)
+            time.sleep(0.1)
 
-        # Average score
+        # Show average score
         st.write(f"Average score: **{avg:.2f}**")
 
-        # Comments
+        # Show comments
         if comments.get(gin):
             st.markdown("💬 What people said:")
             for c in comments[gin][:5]:
