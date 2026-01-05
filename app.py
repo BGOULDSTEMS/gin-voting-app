@@ -72,38 +72,31 @@ if entered_pw == admin_pw:
     st.sidebar.success("Admin authenticated")
 
     st.sidebar.subheader("Competition Setup")
-
     new_num = st.sidebar.number_input(
         "Number of gins",
         min_value=1,
         max_value=50,
         value=num_gins
     )
-
     if st.sidebar.button("Save Gin Count"):
         save_state({"phase": phase, "num_gins": new_num})
         st.rerun()
 
     st.sidebar.subheader("Competition Control")
-
     if st.sidebar.button("Open Competition"):
         save_state({"phase": "open", "num_gins": num_gins})
         st.rerun()
-
     if st.sidebar.button("Close Competition"):
         save_state({"phase": "closed", "num_gins": num_gins})
         st.rerun()
-
     if st.sidebar.button("Reveal Winner"):
         save_state({"phase": "presentation", "num_gins": num_gins})
         st.rerun()
-
     if st.sidebar.button("Reset Everything"):
         save_state(DEFAULT_STATE)
         json.dump({}, open(VOTES_FILE, "w"))
         json.dump({}, open(COMMENTS_FILE, "w"))
         st.rerun()
-
 else:
     st.sidebar.info("Enter admin password to control the competition")
 
@@ -137,7 +130,6 @@ if phase == "holding":
 # ----------------------------------
 elif phase == "open":
     st.title("🍸 Cast Your Votes")
-
     voter = st.text_input("Your name or email")
 
     if voter:
@@ -177,28 +169,32 @@ elif phase == "closed":
     show_qr()
 
 # ----------------------------------
-# PRESENTATION PAGE
+# PRESENTATION PAGE WITH ANIMATION
 # ----------------------------------
 elif phase == "presentation":
-    st.title("🏆 Final Standings")
+    st.title("🏆 Final Standings 🎉")
 
-    averages = {
-        gin: sum(v)/len(v) if v else 0
-        for gin, v in votes.items()
-    }
-
+    averages = {gin: sum(v)/len(v) if v else 0 for gin, v in votes.items()}
     ranked = sorted(averages.items(), key=lambda x: x[1], reverse=True)
-    medals = ["🥇 GOLD", "🥈 SILVER", "🥉 BRONZE"]
+    medals = ["🥉 BRONZE", "🥈 SILVER", "🥇 GOLD"]  # Reveal 3rd → 1st
 
     for i, (gin, avg) in enumerate(ranked[:3]):
-        time.sleep(1.2)
-        st.subheader(f"{medals[i]} — {gin}")
+        # 1. Small delay for dramatic effect
+        time.sleep(1.5)
+
+        # 2. Flying medal simulation via emoji & markdown
+        st.markdown(f"<h2 style='text-align:center; font-size:40px'>{medals[i]} — {gin}</h2>", unsafe_allow_html=True)
         st.write(f"Average score: **{avg:.2f}**")
 
+        # 3. Show top comments if any
         if comments.get(gin):
-            st.markdown("💬 What people said:")
+            st.markdown("💬 What people said about this gin:")
             for c in comments[gin][:5]:
                 st.write(f"• {c}")
+
+        # 4. Confetti effect for Gold (last medal)
+        if i == 2:
+            st.balloons()
 
 # ----------------------------------
 # UI CLEANUP (SAFE)
@@ -207,6 +203,7 @@ st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-/* DO NOT hide header — needed to reopen sidebar */
+/* Keep header visible so sidebar can be opened */
 </style>
 """, unsafe_allow_html=True)
+
