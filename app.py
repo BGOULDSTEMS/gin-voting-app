@@ -122,6 +122,32 @@ if entered_pw == admin_pw:
 else:
     st.sidebar.info("Enter admin password to control the competition")
 
+st.markdown("## 🔐 Emergency Data Recovery")
+
+if st.button("Download RAW Votes + Comments"):
+    try:
+        with open(VOTES_FILE, "r") as f:
+            votes_data = f.read()
+        with open(COMMENTS_FILE, "r") as f:
+            comments_data = f.read()
+
+        st.download_button(
+            "Download votes.json",
+            votes_data,
+            file_name="votes.json",
+            mime="application/json"
+        )
+
+        st.download_button(
+            "Download comments.json",
+            comments_data,
+            file_name="comments.json",
+            mime="application/json"
+        )
+
+    except Exception as e:
+        st.error(f"Could not read data files: {e}")
+
 # ----------------------------------
 # AUTO REFRESH
 # ----------------------------------
