@@ -6,6 +6,8 @@ import qrcode
 import pandas as pd
 from io import BytesIO
 
+st.write("DEBUG FILES:", os.listdir("."))
+
 # ----------------------------------
 # CONFIG
 # ----------------------------------
